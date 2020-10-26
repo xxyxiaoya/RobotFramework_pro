@@ -1,0 +1,47 @@
+*** Settings ***
+Library           requests
+Library           RequestsLibrary
+Library           Collections
+
+*** Keywords ***
+login_kh
+    Create Session    url    http://sit1-creditloanapp.zhph.lan
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${com}    Create Dictionary    paramJson=${login_kh_paramJson}    publicParams={"businessline":"${businessline}","tokenid":"","userType":"${userType_kh}","userid":""}
+    ${res}    Post Request    url    /CreditLoanWeb/LoginByUser.spring    data=${com}    headers=${header}
+    log    ${res.text}
+    Should Contain    ${res.json()['message']}    登录成功
+    ${tokenid}    Get From Dictionary    ${res.json()['data']}    tokenid
+    Set Global Variable    ${tokenid_kh}    ${tokenid}
+
+login_jjr
+    Create Session    url    http://sit1-creditloanapp.zhph.lan
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${com}    Create Dictionary    paramJson=${login_qm_paramJson}    publicParams={"businessline":"${businessline}","tokenid":"","userType":"${userType_jjr}","userid":""}
+    ${res}    Post Request    url    /CreditLoanWeb/LoginBySaler.spring    data=${com}    headers=${header}
+    log    ${res.text}
+    Should Contain    ${res.json()['message']}    登录成功
+    ${tokenid}    Get From Dictionary    ${res.json()['data']}    tokenid
+    Set Global Variable    ${tokenid_jjr}    ${tokenid}
+
+login_sale
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    Create Session    url    http://sit1-auditing.zhph.lan
+    &{dict}    Create Dictionary    loginCode=${loginSale}    userPass=${salePasswd}
+    ${addr}    Post Request    url    /loginAction.do    data=&{dict}    headers=${con}
+    log    ${addr.text}
+    Should Contain    ${addr.json()['result']}    SUCCESS
+    &{dict}    Create Dictionary    loginCode=${loginSale}    inputPassword=${salePasswd}
+    ${addr}    Post Request    url    /main.do    data=&{dict}    headers=${con}
+    should contain    ${addr.text}    分公司业务管理
+
+login_audit
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    Create Session    url    http://sit1-creditapr.zhph.lan    headers=${con}
+    &{dict}    Create Dictionary    loginCode=${loginAudit}    userPass=${auditPasswd}
+    ${addr}    Post Request    url    /loginAction.do    data=&{dict}
+    log    ${addr.text}
+    Should Contain    ${addr.json()['result']}    SUCCESS
+    &{dict}    Create Dictionary    loginCode=${loginAudit}    inputPassword=${auditPasswd}
+    ${addr}    Post Request    url    /main.do    data=&{dict}
+    should contain    ${addr.text}    总部信审业务管理

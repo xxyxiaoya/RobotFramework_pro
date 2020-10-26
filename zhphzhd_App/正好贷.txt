@@ -1,0 +1,325 @@
+*** Settings ***
+Library           requests
+Library           RequestsLibrary
+Library           DatabaseLibrary
+Library           Collections
+Library           randomNo
+Resource          login.txt
+Variables         data.py
+
+*** Test Cases ***
+全局变量
+    Set Global Variable    ${applyloankey}    60015336243704809861
+
+客户登录
+    login_kh
+
+提交借款申请（修改方案）
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${com}    Create Dictionary    paramJson=${tjsq_paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveLoanCommitInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功
+    ${apply_loan_key}    Get From Dictionary    ${q.json()['data']}    apply_loan_key
+    Set Global Variable    ${applyloankey}    ${apply_loan_key}
+
+地址信息
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${dzxi_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveAddressInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功
+
+基本资料
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${jbzl_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveBasicInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功
+
+单位信息
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${dwxx_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveCompanyInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    添加成功    #第一次返回添加成功
+    Comment    Should Contain    ${q.json()['message']}    修改成功    #之后都返回修改成功
+
+联系人信息
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${lxrxx_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveContactInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功
+
+负债信息
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${fzxx_paramJson}    applyLoanKey    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/saveDebtInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功
+
+资产信息
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${zcxx_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/SaveAssetInfo.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    保存成功    #第一次返回保存成功
+    Comment    Should Contain    ${q.json()['message']}    修改成功    #之后都返回修改成功
+
+运营商和电商授权
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${com}    Create Dictionary    paramJson={"apply_loan_key":"${applyloankey}"}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/GenerateReports.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    生成成功
+    #修改运营商授权和电商认证状态
+    Connect To Database Using Custom Params    cx_Oracle    'XDAPPUSER','xdapptest','sit1-oracle.zhph.lan:1521/pusit'
+    Execute Sql String    update XD_APPLY_LOAN set operator_state =1,ds_state =1 where apply_loan_key = '${applyloankey}'
+    Disconnect From Database
+
+提交借款
+    login_kh
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${com}    Create Dictionary    paramJson={"apply_loan_key":"${applyloankey}","blackbox":"eyJvcyI6ImFuZHJvaWQiLCJ2ZXJzaW9uIjoiMy4xLjIiLCJwYWNrYWdlcyI6ImNvbS56aHBoLmNyZWRpdGFuZGxvYW5hcHB1KiYxLjguMC4wNjE5IiwicHJvZmlsZV90aW1lIjoxNzEzLCJpbnRlcnZhbF90aW1lIjo2NDQ4NzU3OSwidG9rZW5faWQiOiJSem1TMnVwN0JDSWhIdXlZVWY1UU82dE1WNzFUQVd2emxHeTMxSE9FRE5VeGJQQXkxSTZcLzhNb1NORytScFVqeXZjUlY5ZVVXTHZoZVZcL0ZnTTdTM0VRPT0ifQ=="}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_kh}","userType":"${userType_kh}","userid":"${custNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/CommitLoanInfoOnClient.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    操作成功
+
+经纪人登录
+    login_jjr
+
+提交审核
+    login_jjr
+    ${header}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${paramJson}    Dictaddnewkey    ${tjsh_paramJson}    apply_loan_key    ${applyloankey}
+    ${com}    Create Dictionary    paramJson=${paramJson}    publicParams={"businessline":"${businessLine}","tokenid":"${tokenid_jjr}","userType":"${userType_jjr}","userid":"${salerNo}"}
+    ${q}    Post Request    url    /CreditLoanWeb/CommitLoanInfoOnSaler.spring    data=${com}    headers=${header}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    操作成功
+
+审批人登陆
+    login_audit
+
+数据库查询id
+    #查询loan_id
+    Connect To Database Using Custom Params    cx_Oracle    'loanaudituser','zytest1','sit1-oracle.zhph.lan:1521/xdsit'
+    ${loanId}    Query    select loan_id from loanaudituser.zhph_loan_info where contract_no = '${applyloankey}'
+    ${loanid}    Decode    ${loanId[0][0]}    utf-8
+    Set Global Variable    ${loan_id}    ${loanid}
+    #查询client_id
+    ${clientId}    Query    select client_id from loanaudituser.zhph_loan_info where contract_no = '${applyloankey}'
+    ${clientid}    Decode    ${clientId[0][0]}    utf-8
+    Set Global Variable    ${client_id}    ${clientid}
+    Disconnect From Database
+
+初审审核分单
+    login_audit
+    ${com}    Create Dictionary    loanId=${loan_id}    activitiStatus=${activitiStatus_cs}    userId=${userId}
+    ${n}    Post Request    url    /loanInfo/updateAuditUser.do    data=${com}
+    log    ${n.text}
+    Should Contain    ${n.json()['msg']}    修改审核人成功
+
+总部初审
+    [Documentation]    如果方案变化，要修改loanProduct
+    login_audit
+    #补充流水信息
+    ${com}    Create Dictionary    clientId=${client_id}    oneSalaryContinual=5000    twoSalaryContinual=5000    threeSalaryContinual=5000    fourSalaryContinual=6000
+    ...    fiveSalaryContinual=6000    sixSalaryContinual=7000    sixSalaryMean=5667    socialSecurityBase=2000    accumulationFundBase=5500    householdRegister=Y
+    ...    creditCardDebt=0    creditCardMonthRepayment=0.00    creidtCardApprovalValue=0.00    shzxFinalLoanBalance=0    shzxShouldRepayAmount=0    SHZXCreditMonthApprovalValue=0
+    ...    totalLiabilities=0.00    monthlyRepayment=0.00    sixSelfQueryRecord=400    creditCardUtilization=0    threeLoanQueryRecord=100    threeCreditQueryRecord=200
+    ...    threeSelfQueryRecord=300    mortgage=N
+    ${n}    Post Request    url    /firstaudit/saveCreditSituation.do    data=${com}
+    log    ${n.text}
+    #电话核查
+    ${header}    Create Dictionary    Content-Type=application/json
+    ${n}    Post Request    url    /telCheck/question.do    data={"telDetailId":null,"telClientId":"${client_id}","telContactId":"6F0A913DF7F16DD7E055000000000001","telRelation":"1","telType":"1","telName":"张一","telPhone":"15356897546","telphoneTwo":null,"telsituation":null,"teloption":null,"checkId":null,"telCheckQuestionSaveVos":[{"id":"","result":"正常","remark":""}]}    headers=${header}
+    log    ${n.text}
+    Should Contain    ${n.json()['msg']}    保存成功
+    #总部初审
+    ${com}    Create Dictionary    clientLevel=A    clientId=${client_id}    loanId=${loan_id}    contractNo=${applyloankey}    loanStatus=${loanStatus}
+    ...    activitiStatus=${activitiStatus_cs}    reconsiderType=0    firstAuditOpinion=111    firstApprovalStatus=1    grantAmount=${grantAmount}    loanCycle=${productTerm}
+    ...    loanProduct=${loanProduct}    auditLevel=2    firstExceptionApprovalSub=B    firstSubApprovalException=0
+    ${n}    Post Request    url    /firstaudit/saveFirstAudit.do    data=${com}
+    log    ${n.text}
+    Comment    Should Contain    ${n.text}    "handleStatus":"HEAD_OFFICE_TRIAL_PASS"
+    Should Be Equal As Strings    ${n.status_code}    200
+
+复审审核分单
+    login_audit
+    ${com}    Create Dictionary    loanId=${loan_id}    activitiStatus=${activitiStatus_fs}    userId=${userId}
+    ${n}    Post Request    url    /loanInfo/updateAuditUser.do    data=${com}
+    log    ${n.text}
+    Should Contain    ${n.json()['msg']}    修改审核人成功
+
+总部复审
+    [Documentation]    如果方案变化，要修改productNo、loanProduct
+    login_audit
+    #试算
+    ${com}    Create Dictionary    clientId=${client_id}    productNo=${loanProduct}    sixSalaryMean=5667    totalLiabilities=0.00    loanCycle=${productTerm}
+    ...    householdRegister=Y    mortgage=N    socialSecurityBase=2000    accumulationFundBase=5500    auditLevel=5    salaryType=6
+    ${n}    post request    url    /repeatAudit/calculationAvdAmount.do    data=${com}
+    log    ${n.text}
+    Should Contain    ${n.text}    "status":"1"
+    #总部复审
+    ${com}    Create Dictionary    clientLevel=A    clientId=${client_id}    loanId=${loan_id}    contractNo=${applyloankey}    loanStatus=${loanStatus}
+    ...    activitiStatus=${activitiStatus_fs}    reconsiderType=0    grantAmount1=10000    repeatAuditOpinion=222    repeatApprovalStatus=1    grantAmount=${grantAmount}
+    ...    loanCycle=${productTerm}    loanProduct=${loanProduct}    auditLevel=5    repeatSubApprovalException=0    recommendedLimit=30000
+    ${n}    post request    url    /repeatAudit/saveRepeatAudit.do    data=${com}
+    log    ${n.text}
+    Should Be Equal As Strings    ${n.status_code}    200
+
+销售登录
+    login_sale
+
+注册授权
+    login_sale
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    ${com}    Create Dictionary    grantAccount=${bankcardNo}    repaymentAccount=${bankcardNo}    clientId=${client_id}    contractNo=${applyloankey}    grantDate=2018-07-17
+    ...    grantBank=1    grantBankDescribe=${bankDescribe}    repaymentBank=1    repaymentBankDescribe=${bankDescribe}    grantProvince=12    grantCity=1201
+    ...    grantCounty=120101    repaymentProvince=12    repaymentCity=1201    repaymentCounty=120101    loanId=${loan_id}    channel=TUANDAI
+    ...    bankReservedPhone=${mobile}    fundDespoitStatus=0
+    ${q}    Post Request    url    /storageManage/checkDepositorySatus.do    data=${com}    headers=${con}
+    log    ${q.text}
+    Should Contain    ${q.text}    "status":"1"
+    ${com1}    Create Dictionary    realName=${realName}    idCardNo=${custcertNo}    mobile=${mobile}    loanContractNo=${applyloankey}    bankcardNo=${bankcardNo}
+    ...    payAddrProvince_t=12    payAddrCity_t=1201    payAddrCounty_t=120101    repayAddrProvince_t=12    repayAddrCity_t=1201    repayAddrCounty_t=120101
+    ...    payOpenBankCode_val=1    repayOpenBankCode_val=1    grantLoanDate=2018-07-17    payOpenBankDesc_val=${bankDescribe}    repayOpenBankDesc_val=${bankDescribe}    payOpenBankCode_txt=${openBankCode}
+    ...    repayOpenBankCode_txt=${openBankCode}    loanid=${loan_id}    bankReservedPhone=${mobile}
+    ${q1}    Post Request    url    /signed/register.do    data=${com1}    headers=${con}
+    log    ${q1.text}
+    Should Contain    ${q1.text}    "code":"1"
+
+厦行授权
+    login_sale
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    #预绑定
+    ${com}    Create Dictionary    clientId=${client_id}    contractNo=${applyloankey}    grantAccount=${bankcardNo}    bankReservedPhone=${mobile}    grantBankDescribe=${bankDescribe}
+    ...    grantBank=1
+    ${q}    Post Request    url    /payChannel/tdPreBinding.do    data=${com}    headers=${con}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    预绑定成功
+    #绑定
+    ${com}    Create Dictionary    clientId=${client_id}    contractNo=${applyloankey}    grantAccount=${bankcardNo}    bankReservedPhone=${mobile}    grantBankDescribe=${bankDescribe}
+    ...    grantBank=1    grantDate=2018-08-01    grantProvince=12    grantCity=1201    grantCounty=120101    uniqueCode=1561
+    ${q}    Post Request    url    /payChannel/tdConfirmBinding.do    data=${com}    headers=${con}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    绑卡成功
+
+上传附件
+    login_sale
+    #上传身份证原件
+    ${file1}    evaluate    open('./df.txt','rb')
+    ${file4}    Create Dictionary    files=${file1}
+    ${com}    Create Dictionary    clientId=${client_id}    attachmentChildType=QYSFZYJ    loanContractNo=${applyloankey}    attachmentType=QYFJ
+    ${n}    Post Request    url    /attach/uploadFile.do    data=${com}    files=${file4}
+    log    ${n.text}
+    Should Contain    ${n.json()['message']}    操作成功
+    #上传放扣款账户
+    ${file2}    evaluate    open('./df.txt','rb')
+    ${file5}    Create Dictionary    files=${file2}
+    ${com}    Create Dictionary    clientId=${client_id}    attachmentChildType=FKKZH    loanContractNo=${applyloankey}    attachmentType=QYFJ
+    ${n}    Post Request    url    /attach/uploadFile.do    data=${com}    files=${file5}
+    log    ${n.text}
+    Should Contain    ${n.json()['message']}    操作成功
+    #上传声明书
+    ${file3}    evaluate    open('./sms.docx','rb')
+    ${file6}    Create Dictionary    files=${file3}
+    ${com}    Create Dictionary    clientId=${client_id}    attachmentChildType=SMS    loanContractNo=${applyloankey}    attachmentType=QYFJ
+    ${n}    Post Request    url    /attach/uploadFile.do    data=${com}    files=${file6}
+    log    ${n.text}
+    Should Contain    ${n.json()['message']}    操作成功
+
+生成协议附件
+    login_sale
+    Comment    sleep    5
+    #授权委托书/担保协议书/团贷网服务协议/信息咨询服务协议/还款事项提醒函
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    ${com}    create dictionary    clientId=${client_id}    signImg=iVBORw0KGgoAAAANSUhEUgAAAkQAAAF8CAYAAAAuIaQHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAZmSURBVHhe7dYBAQAACMMg+5e+QQYpuAEAxAkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAeUIEAOQJEQCQJ0QAQJ4QAQB5QgQA5AkRAJAnRABAnhABAHlCBADkCREAkCdEAECeEAEAcdsDB/oVSuONSvUAAAAASUVORK5CYII=
+    ${n}    post request    url    /paperless/signatureSave.do    data=${com}    headers=${con}
+    log    ${n.text}
+    Should Contain    ${n.json()['msg']}    1
+    #
+    ${com}    create dictionary    clientId=${client_id}
+    ${n}    post request    url    /paperless/signatureValidate.do    data=${com}    headers=${con}
+    log    ${n.text}
+    Should Contain    ${n.text}    "state":"1"
+    #
+    ${com}    create dictionary    clientId=${client_id}    grantDate=2018-08-01    grantBank=1    grantAccount=${bankcardNo}    grantBankDescribe=1
+    ...    grantProvince=12    grantCity=1201    grantCounty=120101    repaymentBank=1    repaymentAccount=${bankcardNo}    repaymentBankDescribe=1
+    ...    repaymentProvince=12    repaymentCity=1201    repaymentCounty=120101
+    ${n}    post request    url    /paperless/createAgreementFile.do    data=${com}    headers=${con}
+    log    ${n.text}
+    Should Contain    ${n.json()['attachmentCount']}    8    #表示8种文件已经上传
+
+提交签约
+    login_sale
+    ${con}    Create Dictionary    Content-Type=application/x-www-form-urlencoded;charset=UTF-8
+    ${com}    Create Dictionary    clientId=${client_id}    attachmentType=QYFJ
+    ${n}    Post Request    url    /signed/signedValidate.do    data=${com}    headers=${con}
+    log    ${n.text}
+    Should Contain    ${n.json()['status']}    1
+    ${com}    Create Dictionary    clientId=${client_id}
+    ${n}    Post Request    url    /signed/signedModify.do    data=${com}    headers=${con}
+    Should Contain    ${n.text}    签约回退
+
+复核审核分单
+    login_audit
+    ${com}    Create Dictionary    points=${client_id}    auditStatus=${auditStatus}    auditUser=${userId}
+    ${n}    Post Request    url    /auditPoints/updateAuditPoints.do    data=${com}
+    log    ${n.text}
+    ${h}    to json    ${n.text}
+    ${mm}    Get From Dictionary    ${h}    msg
+    should be equal as strings    ${mm}    设置成功
+
+签约复核提交
+    login_audit
+    ${com}    Create Dictionary    clientIds=${client_id}
+    ${n}    Post Request    url    /signRecheck/signRecheckModify.do    data=${com}
+    ${h}    to json    ${n.text}
+    ${mm}    Get From Dictionary    ${h}    status
+    should be equal as strings    ${mm}    0
+
+提交放款
+    login_audit
+    ${com}    Create Dictionary    points=${client_id}
+    ${q}    Post Request    url    /makeLoan/submitPay.do    data=${com}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    操作成功
+
+回盘
+    ${com}    Create Dictionary    info=[{"contractNo":"${applyloankey}","withdrewStatus":2,"fullSuccessDate":"2018-06-09","withdrewStrStatus":"提现成功"}]
+    ${q}    requests.Post    http://sit1-auditing.zhph.lan/rest/creditLoan/updatePayStaus    data=${com}
+    log    ${q.text}
+    Should Contain    ${q.json()['message']}    操作成功
+
+审批数据库删除借款审批记录
+    #删除中央审批记录
+    Connect To Database Using Custom Params    cx_Oracle    'loanaudituser','zytest1','sit1-oracle.zhph.lan:1521/xdsit'
+    Execute Sql String    delete loanaudituser.zhph_client_info \ where client_id in (select client_id from loanaudituser.zhph_loan_info where contract_no = '${applyloankey}')
+    Execute Sql String    delete loanaudituser.zhph_loan_info where contract_no = '${applyloankey}'
+    Disconnect From Database
+    #在app库删除进件记录
+    Connect To Database Using Custom Params    cx_Oracle    'XDAPPUSER','xdapptest','sit1-oracle.zhph.lan:1521/pusit'
+    Execute Sql String    delete XD_APPLY_LOAN where apply_loan_key = '${applyloankey}'
+    Disconnect From Database
+
+修改贷后数据库客户进件信息
+    #修改贷后数据库数据
+    Connect To Database Using Custom Params    cx_Oracle    'clspuser','xdtest1','192.168.7.198:1521/xdsit'
+    Execute Sql String    update crf_p2p_account_info set loan_name_phone = '15182695693',id_card = '511121197405185752' where loan_contract_no = '${applyloankey}'
+    Disconnect From Database
