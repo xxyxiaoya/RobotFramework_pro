@@ -1,0 +1,48 @@
+*** Settings ***
+Library                 RequestsLibrary
+Library                 Collections
+Resource                数据库操作.txt
+
+*** Keywords ***
+发送登录短信验证码
+          [Arguments]          ${phone}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          phone=${phone}
+          ${addr}          Post Request          host          /app/sendSmsCode.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          验证码已发送至您的手机
+
+发送修改手机验证码
+          [Arguments]          ${changephone}
+          Create Session          host          http://${host}:${port}
+          ${header}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          phone=${changephone}
+          ${addr}          Post Request          host          /app/customer/changePhoneSendCode.html          params=${params}          headers=${header}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          验证码已发送至您的手机
+
+登录App
+          [Arguments]          ${phone}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          phone=${phone}          code=${smsCode}
+          ${addr}          Post Request          host          /app/login.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          用户登录成功
+          Set Global Variable          ${auth}          ${addr.json()['data']}
+
+修改手机号
+          [Arguments]          ${changephone}          ${assertmsg}
+          [Documentation]          assertmsg：断言信息
+          Create Session          host          http://${host}:${port}
+          ${header}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          phone=${changephone}          code=${smsCode}
+          ${addr}          Post Request          host          /app/customer/changePhone.html          params=${params}          headers=${header}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          ${assertmsg}
+
+退出登录App
+          Create Session          host          http://${host}:${port}
+          ${header}          Create Dictionary          earth.house.app.auth=${auth}
+          ${addr}          Post Request          host          /app/logOut.html          headers=${header}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          退出成功

@@ -1,0 +1,29 @@
+*** Settings ***
+Library                 RequestsLibrary
+Library                 Collections
+
+*** Keywords ***
+根据key值获取相应配置
+          [Arguments]          ${key}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          channel=${channel}          appVersion=${appVersion}          imei=${imei}          model=${model}          systemVersion=${systemVersion}
+          ${params}          Create Dictionary          key=${key}
+          ${addr}          Get Request          host          /app/appConfigManagement/getAppConfigByKey.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          获取配置成功
+
+根据渠道获取当前最新app版本
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          channel=${channel}          appVersion=${appVersion}          imei=${imei}          model=${model}          systemVersion=${systemVersion}
+          ${addr}          Get Request          host          /app/appVersionManagement/getAppVersion.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          app最新版本
+
+根据客户登录状态获取app配置
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          channel=${channel}          appVersion=${appVersion}          imei=${imei}          model=${model}          systemVersion=${systemVersion}
+          ${addr}          Get Request          host          /app/appConfigManagement/getAppConfigByLoginStatus.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          获取配置成功
+          ${key}          Get From Dictionary          ${addr.json()['data'][0]}          keyy
+          Set Global Variable          ${keyy}          ${key}

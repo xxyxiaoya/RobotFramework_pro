@@ -1,0 +1,23 @@
+*** Settings ***
+Library                 DatabaseLibrary
+
+*** Keywords ***
+数据库查询指定手机验证码
+          [Arguments]          ${database}          ${phone}
+          Connect To Database Using Custom Params          pymysql          host='${db_host}',user='${username}',password='${password}',port=${db_port},database='${database}'
+          ${code}          Query          SELECT sms_code,add_time FROM sms_code_record WHERE phone = '${phone}' ORDER BY add_time DESC LIMIT 0,1
+          Set Global Variable          ${smsCode}          ${code[0][0]}
+          Disconnect From Database
+
+数据库查询指定手机号用户customerId
+          [Arguments]          ${database}          ${phone}
+          Connect To Database Using Custom Params          pymysql          host='${db_host}',user='${username}',password='${password}',port=${db_port},database='${database}'
+          ${id}          Query          SELECT id FROM customer WHERE phone = '${phone}'
+          Set Global Variable          ${customerid }          ${id[0][0]}
+          Disconnect From Database
+
+数据库执行操作
+          [Arguments]          ${database}          ${Sql_String}
+          Connect To Database Using Custom Params          pymysql          host='${db_host}',user='${username}',password='${password}',port=${db_port},database='${database}'
+          Execute Sql String          ${Sql_String}
+          Disconnect From Database

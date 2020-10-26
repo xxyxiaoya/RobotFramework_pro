@@ -1,0 +1,188 @@
+*** Settings ***
+Library                 RequestsLibrary
+Library                 DatabaseLibrary
+Library                 Collections
+
+*** Variables ***
+
+*** Keywords ***
+创建订单
+          [Arguments]          ${hId}          ${pId}          ${roomId}          ${channel}          ${checkInTime}          ${departureTime}
+          ...          ${customerName}          ${customerPhone}          ${tenantIdCard}          ${tenantName}          ${tenantPhone}          ${roomdate}
+          ...          ${numOfBreakfast}          ${price}          ${deposit}
+          [Documentation]          hId：酒店id
+          ...          pId：产品id
+          ...          roomId：房间id
+          ...
+          ...          channel：渠道 （0App 1小程序）
+          ...          checkInTime：入住时间
+          ...          departureTime：离店时间
+          ...
+          ...          customerName：预订人姓名
+          ...          customerPhone：预订人电话
+          ...
+          ...          tenantIdCard：入住人身份证
+          ...          tenantName：入住人姓名
+          ...          tenantPhone：入住人电话
+          ...
+          ...          roomdate：房间日期
+          ...          numOfBreakfast：早餐份数
+          ...          price：房价
+          ...          deposit：押金
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          #入住人列表
+          ${tenantlist1}          Create Dictionary          customerIdCard=${tenantIdCard}          customerName=${tenantName}          customerPhone=${tenantPhone}
+          ${createOrderCustomerDtos}          create list          ${tenantlist1}
+          #房价列表
+          ${roomratelist1}          Create Dictionary          date=${roomdate}          numOfBreakfast=${numOfBreakfast}          price=${price}
+          ${createOrderRoomPriceDtos}          create list          ${roomratelist1}
+          #入住信息集合
+          ${roomCheckInlist}          Create Dictionary          createOrderCustomerDtos=${createOrderCustomerDtos}          createOrderRoomPriceDtos=${createOrderRoomPriceDtos}          roomId=${roomId}
+          ${roomCheckInDtos}          create list          ${roomCheckInlist}
+          log          ${roomCheckInDtos}
+          #请求
+          ${body}          Create Dictionary          channel=${channel}          checkInTime=${checkInTime}          departureTime=${departureTime}          customerId=          customerName=${customerName}
+          ...          customerPhone=${customerPhone}          deposit=${deposit}          hId=${hId}          pId=${pId}          roomCheckInDtos=${roomCheckInDtos}
+          log          ${body}
+          ${addr}          Post Request          host          /app/order/createOrder.html          json=${body}          headers=${headers}
+          log          ${addr.content}
+          Set Global Variable          ${orderid}          ${addr.json()['data']}
+          Should Contain          ${addr.json()['msg']}          订单创建成功
+
+支付订单
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          payId=${orderid}
+          ${addr}          Post Request          host          /app/payOrder.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          支付成功
+
+获取订单分页列表
+          [Arguments]          ${status}=
+          [Documentation]          status：null全部 0待付款 1已付款 2已入住 3已取消 4已离店
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          status=${status}          page=1          limit=5
+          ${addr}          Get Request          host          /app/order/getOnlineOrder.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          操作成功
+          ${id}          Get From Dictionary          ${addr.json()['data']['data'][0]}          id
+          Set Global Variable          ${orderid}          ${id}
+
+查询客户未支付订单
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${addr}          Get Request          host          /app/order/toBePaidOrder.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['code']}          200
+          Should Contain          ${addr.json()['msg']}          待支付订单
+
+获取订单详情
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/getOrderInfo.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          操作成功
+
+获取订单房间列表
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/getRoomInfoList.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          操作成功
+
+获取订单付款列表
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/selectGatheringByOrderId.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          订单付款信息
+
+获取订单消费列表
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/selectConsumptionByOrderId.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          订单消费信息
+
+判断订单有无责任
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/dutyFlag.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['code']}          200
+          Set Global Variable          ${dutyFlag}          ${addr.json()['msg']}
+
+取消订单
+          [Arguments]          ${orderid}          ${dutyFlag}          ${cancelReason}=
+          [Documentation]          dutyFlag：有无责任取消（0无责 1有责）
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}          dutyFlag=${dutyFlag}          cancelReason=${cancelReason}
+          ${addr}          Post Request          host          /app/order/cancelOrder.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          订单取消成功
+
+评论订单
+          [Arguments]          ${orderid}          ${sceneryStar}          ${serviceStar}          ${peripheryStar}          ${stayStar}          ${content}=
+          ...          ${imgs}=
+          [Documentation]          content：评论内容
+          ...          sceneryStar：风景评分
+          ...          serviceStar：服务评分
+          ...          peripheryStar：周边评分
+          ...          stayStar：住宿评分
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}          content=${content}          sceneryStar=${sceneryStar}          serviceStar=${serviceStar}          peripheryStar=${peripheryStar}
+          ...          stayStar=${stayStar}          imgs=${imgs}
+          ${addr}          Post Request          host          /app/order/saveOrderComment.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          保存订单评价成功
+
+查询订单评论详情
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Get Request          host          /app/order/selectOrderComment.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          评论详情
+
+订单投诉
+          [Arguments]          ${orderid}          ${suggestion}=          ${imgs}=
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}          suggestion=${suggestion}          imgs=${imgs}
+          ${addr}          Post Request          host          /app/order/saveOrderSuggest.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          订单投诉成功
+
+猜你想去
+          [Arguments]          ${orderid}          ${recommendNum}=
+          [Documentation]          recommendNum：推荐产品个数（不填，默认为4）
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}          recommendNum=${recommendNum}
+          ${addr}          Get Request          host          /app/product/recommendProduct.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          产品推荐列表
+
+删除订单
+          [Arguments]          ${orderid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          orderId=${orderid}
+          ${addr}          Post Request          host          /app/order/hideOrder.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          订单删除成功

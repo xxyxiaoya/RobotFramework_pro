@@ -1,0 +1,77 @@
+*** Settings ***
+Library                 RequestsLibrary
+Library                 Collections
+
+*** Keywords ***
+获取客户信息详情
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${addr}          Get Request          host          /app/customer/customerDetail.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          客户信息详情
+
+登录客户修改资料
+          [Arguments]          ${name}          ${nickName}          ${personSign}          ${birthday}          ${sex}          ${idCard}=
+          ...          ${email}=          ${qqUnionid}=          ${headImg}=
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${body}          Create Dictionary          name=${name}          nickName=${nickName}          personSign=${personSign}          birthday=${birthday}          sex=${sex}
+          ...          idCard=${idCard}          email=${email}          qqUnionid=${qqUnionid}          headImg=${headImg}
+          ${addr}          Post Request          host          /app/customer/updateCustomerInfo.html          json=${body}          headers=${headers}
+          log          ${addr.content}
+          log          ${addr.json()['msg']}
+          Should Contain          ${addr.json()['msg']}          修改客户信息成功
+
+添加客户意见&建议
+          [Arguments]          ${content}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          content=${content}
+          ${addr}          Post Request          host          /app/appSuggestions/submitSuggestions.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          提交意见成功
+
+根据登录客户获取意见&建议分页数据
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${addr}          Get Request          host          /app/appSuggestions/getSuggestionsPage.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          意见分页数据
+
+获取当前登录客户的常用预订人列表
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${addr}          Get Request          host          /app/customer/reservationsList.html          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          常用预订人信息列表
+          ${id}          Get From Dictionary          ${addr.json()['data'][0]}          id
+          Set Global Variable          ${bookpeoid}          ${id}
+
+新增常用预订人信息
+          [Arguments]          ${customerName}          ${customerPhone}          ${idCard}          ${bookpeoid}=
+          [Documentation]          bookpeoid：不填时为新增，必填时为修改
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${body}          Create Dictionary          id=${bookpeoid}          customerName=${customerName}          customerPhone=${customerPhone}          idCard=${idCard}
+          ${addr}          Post Request          host          /app/customer/saveReservations.html          json=${body}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          新增常用预订人成功
+
+修改常用预订人信息
+          [Arguments]          ${bookpeoid}          ${customerName}          ${customerPhone}          ${idCard}
+          [Documentation]          bookpeoid：记录id（修改信息必填）
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${body}          Create Dictionary          id=${bookpeoid}          customerName=${customerName}          customerPhone=${customerPhone}          idCard=${idCard}
+          ${addr}          Post Request          host          /app/customer/saveReservations.html          json=${body}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          修改已有预订人信息成功
+
+解绑微信
+          [Arguments]          ${customerid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          id=${customerid}
+          ${addr}          Post Request          host          /app/customer/deleteWechat.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          解绑微信成功

@@ -1,0 +1,119 @@
+*** Settings ***
+Library                 RequestsLibrary
+Library                 Collections
+
+*** Keywords ***
+获取指定酒店的酒店信息
+          [Arguments]          ${hotelId}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          hotelId=${hotelId}
+          ${addr}          Get Request          host          /app/hotel/hotelInfo.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          酒店详情
+
+获取首页产品分页列表
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          page=1          limit=5
+          ${addr}          Get Request          host          /app/product/page.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          首页产品分页列表
+
+获取产品详情
+          [Arguments]          ${pid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          id=${pid}
+          ${addr}          Get Request          host          /app/product/info.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          产品详情
+
+查询指定产品评论列表分页数据
+          [Arguments]          ${pid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          pId=${pid}          page=1          limit=5
+          ${addr}          Get Request          host          /app/product/commentPage.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          评论分页数据
+
+查询评论详情
+          [Arguments]          ${commentid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          commentId=${commentid}
+          ${addr}          Get Request          host          /app/product/commentInfo.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          评论详情
+
+收藏产品
+          [Arguments]          ${pid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          productId=${pid}
+          ${addr}          Post Request          host          /app/product/collection.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          收藏成功
+
+取消收藏产品
+          [Arguments]          ${pid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          productId=${pid}
+          ${addr}          Post Request          host          /app/product/delCollection.html          params=${params}          headers=${headers}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          取消收藏成功
+
+查询用户产品收藏分页列表
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          page=1          limit=5
+          ${addr}          Get Request          host          /app/product/collectionList.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          收藏列表
+
+判定用户是否收藏指定产品
+          [Arguments]          ${pid}
+          Create Session          host          http://${host}:${port}
+          ${headers}          Create Dictionary          earth.house.app.auth=${auth}
+          ${params}          Create Dictionary          productId=${pid}
+          ${addr}          Get Request          host          /app/product/getCollection.html          headers=${headers}          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          未收藏          #已收藏
+
+查询指定酒店的所有房间类型
+          [Arguments]          ${hid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          hotelId=${hid}
+          ${addr}          Get Request          host          /app/room/getHotelRoomTypes.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          房间类型列表
+
+查询指定酒店房间列表
+          [Arguments]          ${hid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          hotelId=${hid}
+          ${addr}          Get Request          host          /app/room/getRoomList.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          房间列表
+          Set Global Variable          ${roomid}          ${addr.json()['data'][0]['id']}
+
+查询指定酒店指定日期内的可用房间
+          [Arguments]          ${hid}          ${startDate}          ${endDate}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          hotelId=${hid}          startDate=${startDate}          endDate=${endDate}
+          ${addr}          Get Request          host          /app/room/getAvailableRoom.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          可用房间列表
+
+查询房间详情
+          [Arguments]          ${roomid}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          roomId=${roomid}
+          ${addr}          Get Request          host          /app/room/getRoom.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          房间信息
+
+查询指定房间的特定日期价格
+          [Arguments]          ${roomid}          ${dateStart}          ${dateEnd}
+          Create Session          host          http://${host}:${port}
+          ${params}          Create Dictionary          roomIds=${roomid}          dateStart=${dateStart}          dateEnd=${dateEnd}
+          ${addr}          Get Request          host          /app/room/getPrice.html          params=${params}
+          log          ${addr.content}
+          Should Contain          ${addr.json()['msg']}          房间价格
